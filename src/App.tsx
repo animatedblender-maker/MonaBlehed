@@ -328,6 +328,8 @@ function App() {
 
   const spreadStyle = {
     '--drag-offset': `${dragOffset}px`,
+    '--drag-next': dragSideRef.current === 'next' ? `${Math.abs(Math.min(0, dragOffset))}px` : '0px',
+    '--drag-prev': dragSideRef.current === 'prev' ? `${Math.max(0, dragOffset)}px` : '0px',
   } as React.CSSProperties
 
   const nextDisabled = currentSpread >= bookPages.length - 2
@@ -398,16 +400,20 @@ function App() {
               data-side="prev"
               onPointerDown={handlePagePointerDown}
             >
-              <img src={leftPage.src} alt={`Book page ${currentSpread + 1}`} />
-              {leftPage.text ? <div className="book-stage__text">{leftPage.text}</div> : null}
+              <div className="book-stage__sheet">
+                <img src={leftPage.src} alt={`Book page ${currentSpread + 1}`} />
+                {leftPage.text ? <div className="book-stage__text">{leftPage.text}</div> : null}
+              </div>
             </article>
             <article
               className={`book-stage__page book-stage__page--right ${nextDisabled ? 'book-stage__page--disabled' : 'book-stage__page--grabbable'}`}
               data-side="next"
               onPointerDown={handlePagePointerDown}
             >
-              <img src={rightPage.src} alt={`Book page ${Math.min(currentSpread + 2, bookPages.length)}`} />
-              {rightPage.text ? <div className="book-stage__text">{rightPage.text}</div> : null}
+              <div className="book-stage__sheet">
+                <img src={rightPage.src} alt={`Book page ${Math.min(currentSpread + 2, bookPages.length)}`} />
+                {rightPage.text ? <div className="book-stage__text">{rightPage.text}</div> : null}
+              </div>
             </article>
           </div>
         </div>

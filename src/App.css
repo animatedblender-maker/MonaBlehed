@@ -277,12 +277,10 @@
 .book-stage__page {
   position: relative;
   min-height: min(82vh, 64rem);
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
   border-radius: 1.25rem;
   background:
     linear-gradient(180deg, rgba(255, 251, 242, 0.98), rgba(241, 226, 199, 0.98));
-  overflow: hidden;
+  overflow: visible;
   box-shadow:
     inset 0 0 0 1px rgba(93, 54, 27, 0.12),
     0 1.4rem 2rem rgba(45, 17, 6, 0.12);
@@ -298,6 +296,22 @@
 
 .book-stage__page--disabled {
   cursor: default;
+}
+
+.book-stage__sheet {
+  position: relative;
+  min-height: min(82vh, 64rem);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 251, 242, 0.99), rgba(241, 226, 199, 0.99));
+  box-shadow:
+    inset 0 0 0 1px rgba(93, 54, 27, 0.12),
+    0 1.4rem 2rem rgba(45, 17, 6, 0.12);
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out, filter 120ms ease-out;
+  will-change: transform, box-shadow;
 }
 
 .book-stage__page img {
@@ -321,19 +335,55 @@
 }
 
 .book-stage__page--left {
-  transform:
-    perspective(1600px)
-    rotateY(calc(min(0px, var(--drag-offset)) / 18))
-    translateX(calc(min(0px, var(--drag-offset)) / 12));
-  transform-origin: right center;
+  perspective: 2200px;
 }
 
 .book-stage__page--right {
+  perspective: 2200px;
+}
+
+.book-stage__page--left .book-stage__sheet {
   transform:
-    perspective(1600px)
-    rotateY(calc(max(0px, var(--drag-offset)) / -18))
-    translateX(calc(max(0px, var(--drag-offset)) / 12));
+    translateX(calc(var(--drag-prev) / 9))
+    translateY(calc(var(--drag-prev) / -28))
+    rotateZ(calc(var(--drag-prev) / 110))
+    rotateY(calc(var(--drag-prev) / 10))
+    skewY(calc(var(--drag-prev) / 120));
+  transform-origin: right center;
+  box-shadow:
+    inset 0 0 0 1px rgba(93, 54, 27, 0.12),
+    calc(var(--drag-prev) / 18) 1.6rem 2.6rem rgba(45, 17, 6, 0.22);
+}
+
+.book-stage__page--right .book-stage__sheet {
+  transform:
+    translateX(calc(var(--drag-next) / -9))
+    translateY(calc(var(--drag-next) / -28))
+    rotateZ(calc(var(--drag-next) / -110))
+    rotateY(calc(var(--drag-next) / -10))
+    skewY(calc(var(--drag-next) / -120));
   transform-origin: left center;
+  box-shadow:
+    inset 0 0 0 1px rgba(93, 54, 27, 0.12),
+    calc(var(--drag-next) / -18) 1.6rem 2.6rem rgba(45, 17, 6, 0.22);
+}
+
+.book-stage__page--left .book-stage__sheet::after,
+.book-stage__page--right .book-stage__sheet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(124, 77, 44, 0.12), transparent 22%, transparent 78%, rgba(124, 77, 44, 0.08));
+  mix-blend-mode: multiply;
+}
+
+.book-stage__spread--drag-next .book-stage__page--right .book-stage__sheet::after {
+  background: linear-gradient(90deg, rgba(124, 77, 44, 0.22), transparent 28%, transparent 68%, rgba(255, 255, 255, 0.18));
+}
+
+.book-stage__spread--drag-prev .book-stage__page--left .book-stage__sheet::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 32%, transparent 72%, rgba(124, 77, 44, 0.22));
 }
 
 .book-stage__spread--next .book-stage__page--right {
@@ -399,6 +449,10 @@
   }
 
   .book-stage__page {
+    min-height: min(56vh, 38rem);
+  }
+
+  .book-stage__sheet {
     min-height: min(56vh, 38rem);
   }
 
