@@ -76,14 +76,19 @@ function PalmTree({ palm }: { palm: Palm }) {
 }
 
 function App() {
-  const [currentPage, setCurrentPage] = useState(0)
+  const [currentSpread, setCurrentSpread] = useState(0)
   const [openProgress, setOpenProgress] = useState(0)
   const [windReady, setWindReady] = useState(false)
   const [soundOn, setSoundOn] = useState(false)
   const [turnDirection, setTurnDirection] = useState<'next' | 'prev' | null>(null)
+  const [dragOffset, setDragOffset] = useState(0)
   const audioContextRef = useRef<AudioContext | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const turnTimeoutRef = useRef<number | null>(null)
+  const dragStartXRef = useRef<number | null>(null)
+  const dragSideRef = useRef<'next' | 'prev' | null>(null)
+  const swipeStartYRef = useRef<number | null>(null)
+  const swipeProgressStartRef = useRef(0)
 
   const isBookOpen = openProgress >= 1
 
@@ -192,49 +197,154 @@ function App() {
   }, [])
 
   const handleWheel: React.WheelEventHandler<HTMLElement> = (event) => {
-    if (isBookOpen || event.deltaY <= 0) {
-      return
-    }
-
     event.preventDefault()
     void startWind()
 
-    setOpenProgress((progress) => Math.min(1, progress + event.deltaY / 900))
+    setOpenProgress((progress) => Math.max(0, Math.min(1, progress + event.deltaY / 900)))
+  }
+
+  const handleScenePointerDown: React.PointerEventHandler<HTMLElement> = (event) => {
+    const target = event.target as HTMLElement
+
+    if (target.closest('.book-stage__spread')) {
+      return
+    }
+
+    swipeStartYRef.current = event.clientY
+    swipeProgressStartRef.current = openProgress
+  }
+
+  const handleScenePointerMove: React.PointerEventHandler<HTMLElement> = (event) => {
+    if (swipeStartYRef.current === null) {
+      return
+    }
+
+    const delta = swipeStartYRef.current - event.clientY
+    setOpenProgress(Math.max(0, Math.min(1, swipeProgressStartRef.current + delta / 500)))
+  }
+
+  const endSceneSwipe = () => {
+    swipeStartYRef.current = null
   }
 
   const animateTurn = (direction: 'next' | 'prev', nextIndex: number) => {
     setTurnDirection(direction)
+    setDragOffset(0)
     if (turnTimeoutRef.current !== null) {
       window.clearTimeout(turnTimeoutRef.current)
     }
 
     turnTimeoutRef.current = window.setTimeout(() => {
-      setCurrentPage(nextIndex)
+      setCurrentSpread(nextIndex)
       setTurnDirection(null)
       turnTimeoutRef.current = null
     }, 180)
   }
 
   const nextPage = () => {
-    if (currentPage >= bookPages.length - 1) {
+    if (currentSpread >= bookPages.length - 2) {
       return
     }
 
-    animateTurn('next', currentPage + 1)
+    animateTurn('next', Math.min(currentSpread + 2, Math.max(bookPages.length - 1, 0)))
   }
 
   const prevPage = () => {
-    if (currentPage <= 0) {
+    if (currentSpread <= 0) {
       return
     }
 
-    animateTurn('prev', currentPage - 1)
+    animateTurn('prev', Math.max(currentSpread - 2, 0))
   }
+
+  const handleSpreadPointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (!isBookOpen) {
+      return
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const clickedRightHalf = event.clientX > bounds.left + bounds.width / 2
+
+    if (clickedRightHalf && currentSpread >= bookPages.length - 2) {
+      return
+    }
+
+    if (!clickedRightHalf && currentSpread === 0) {
+      return
+    }
+
+    dragStartXRef.current = event.clientX
+    dragSideRef.current = clickedRightHalf ? 'next' : 'prev'
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+
+  const handleSpreadPointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (dragStartXRef.current === null || dragSideRef.current === null) {
+      return
+    }
+
+    const delta = event.clientX - dragStartXRef.current
+    const nextOffset = dragSideRef.current === 'next' ? Math.min(0, delta) : Math.max(0, delta)
+    setDragOffset(nextOffset)
+  }
+
+  const endDrag = () => {
+    if (dragSideRef.current === 'next' && dragOffset < -90) {
+      nextPage()
+    } else if (dragSideRef.current === 'prev' && dragOffset > 90) {
+      prevPage()
+    } else {
+      setDragOffset(0)
+    }
+
+    dragStartXRef.current = null
+    dragSideRef.current = null
+  }
+
+  const handleSpreadPointerUp: React.PointerEventHandler<HTMLDivElement> = (event) => {
+    if (dragStartXRef.current === null) {
+      return
+    }
+
+    event.currentTarget.releasePointerCapture(event.pointerId)
+    endDrag()
+  }
+
+  const leftPage = bookPages[currentSpread]
+  const rightPage = bookPages[Math.min(currentSpread + 1, bookPages.length - 1)]
+  const bookStatus = isBookOpen
+    ? `Book open. Spread ${Math.floor(currentSpread / 2) + 1} of ${Math.ceil(bookPages.length / 2)}.`
+    : `Scroll progress ${Math.round(openProgress * 100)}%. Ambient wind ${windReady ? 'active' : 'loading'}.`
+
+  const spreadStyle = {
+    '--drag-offset': `${dragOffset}px`,
+  } as React.CSSProperties
+
+  const nextDisabled = currentSpread >= bookPages.length - 2
+  const prevDisabled = currentSpread === 0
+
+  useEffect(() => {
+    if (!isBookOpen) {
+      setDragOffset(0)
+      dragStartXRef.current = null
+      dragSideRef.current = null
+    }
+  }, [isBookOpen])
+
+  useEffect(() => {
+    if (openProgress === 0) {
+      setCurrentSpread(0)
+    }
+  }, [openProgress])
 
   return (
     <main
       className={`scene ${isBookOpen ? 'scene--book-open' : ''}`}
       onWheel={handleWheel}
+      onPointerDown={handleScenePointerDown}
+      onPointerMove={handleScenePointerMove}
+      onPointerUp={endSceneSwipe}
+      onPointerCancel={endSceneSwipe}
       style={{ '--open-progress': openProgress } as React.CSSProperties}
     >
       <div className="scene__sky" />
@@ -258,42 +368,34 @@ function App() {
         <p className="hud__eyebrow">Desert memory</p>
         <h1>Scroll deeper and let the book unfold.</h1>
         <p className="hud__copy">
-          The desert opens with the wheel or trackpad. Once the book is fully open, click the right
-          or left page edge to pull through the real illustrated pages.
+          The desert opens with the wheel, trackpad, or a vertical swipe on mobile. Once the book
+          is fully open, drag a page edge to pull through the illustrated spreads.
         </p>
-        <p className="hud__hint">
-          {isBookOpen
-            ? `Book open. Page ${currentPage + 1} of ${bookPages.length}.`
-            : `Scroll progress ${Math.round(openProgress * 100)}%. Ambient wind ${windReady ? 'active' : 'loading'}.`}
-        </p>
+        <p className="hud__hint">{bookStatus}</p>
       </aside>
 
       <section className={`book-stage ${isBookOpen ? 'book-stage--open' : ''}`} aria-hidden={!isBookOpen}>
         <div className="book-stage__shell">
-          <div className={`book-stage__spread ${turnDirection ? `book-stage__spread--${turnDirection}` : ''}`}>
-            <button
-              className="book-stage__pull book-stage__pull--left"
-              type="button"
-              onClick={prevPage}
-              disabled={currentPage === 0}
-              aria-label="Previous page"
-            />
+          <div
+            className={`book-stage__spread ${turnDirection ? `book-stage__spread--${turnDirection}` : ''} ${dragSideRef.current ? `book-stage__spread--drag-${dragSideRef.current}` : ''}`}
+            style={spreadStyle}
+            onPointerDown={handleSpreadPointerDown}
+            onPointerMove={handleSpreadPointerMove}
+            onPointerUp={handleSpreadPointerUp}
+            onPointerCancel={endDrag}
+          >
             <article className="book-stage__page book-stage__page--left">
-              <img src={bookPages[currentPage]} alt={`Book page ${currentPage + 1}`} />
+              <img src={leftPage} alt={`Book page ${currentSpread + 1}`} />
             </article>
             <article className="book-stage__page book-stage__page--right">
-              <img
-                src={bookPages[Math.min(currentPage + 1, bookPages.length - 1)]}
-                alt={`Book page ${Math.min(currentPage + 2, bookPages.length)}`}
-              />
+              <img src={rightPage} alt={`Book page ${Math.min(currentSpread + 2, bookPages.length)}`} />
             </article>
-            <button
-              className="book-stage__pull book-stage__pull--right"
-              type="button"
-              onClick={nextPage}
-              disabled={currentPage >= bookPages.length - 2}
-              aria-label="Next page"
-            />
+            <div className={`book-stage__grab book-stage__grab--left ${prevDisabled ? 'book-stage__grab--disabled' : ''}`}>
+              Pull previous
+            </div>
+            <div className={`book-stage__grab book-stage__grab--right ${nextDisabled ? 'book-stage__grab--disabled' : ''}`}>
+              Pull next
+            </div>
           </div>
         </div>
       </section>

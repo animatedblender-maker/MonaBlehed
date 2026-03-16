@@ -136,13 +136,13 @@
   z-index: 1;
   display: grid;
   place-items: center;
-  width: min(38vw, 22rem);
+  width: min(54vw, 32rem);
   aspect-ratio: 1;
 }
 
 .centerpiece__painting {
-  width: 82%;
-  max-width: 20rem;
+  width: 100%;
+  max-width: 29rem;
   border-radius: 1.25rem;
   clip-path: polygon(13% 17%, 50% 4%, 85% 14%, 95% 40%, 89% 79%, 57% 96%, 23% 90%, 6% 59%);
   box-shadow:
@@ -232,7 +232,7 @@
 }
 
 .book-stage__shell {
-  width: min(86rem, 100%);
+  width: min(110rem, 100%);
   transform:
     translateY(calc((1 - var(--open-progress)) * 22vh))
     scale(calc(0.42 + var(--open-progress) * 0.58));
@@ -245,7 +245,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  padding: 1.2rem;
+  padding: 1.4rem;
   border-radius: 2rem;
   background:
     linear-gradient(180deg, rgba(106, 53, 24, 0.96), rgba(73, 31, 14, 0.96)),
@@ -254,6 +254,8 @@
     0 2.4rem 4rem rgba(54, 20, 6, 0.32),
     inset 0 0 0 1px rgba(255, 238, 211, 0.08);
   overflow: hidden;
+  touch-action: none;
+  user-select: none;
 }
 
 .book-stage--open {
@@ -274,7 +276,7 @@
 
 .book-stage__page {
   position: relative;
-  min-height: min(78vh, 58rem);
+  min-height: min(82vh, 64rem);
   border-radius: 1.25rem;
   background:
     linear-gradient(180deg, rgba(255, 251, 242, 0.98), rgba(241, 226, 199, 0.98));
@@ -292,46 +294,56 @@
   background: #f8efde;
 }
 
-.book-stage__pull {
+.book-stage__page--left {
+  transform:
+    perspective(1600px)
+    rotateY(calc(min(0px, var(--drag-offset)) / 18))
+    translateX(calc(min(0px, var(--drag-offset)) / 12));
+  transform-origin: right center;
+}
+
+.book-stage__page--right {
+  transform:
+    perspective(1600px)
+    rotateY(calc(max(0px, var(--drag-offset)) / -18))
+    translateX(calc(max(0px, var(--drag-offset)) / 12));
+  transform-origin: left center;
+}
+
+.book-stage__grab {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 14%;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-  z-index: 3;
-}
-
-.book-stage__pull--left {
-  left: 0;
-}
-
-.book-stage__pull--right {
-  right: 0;
-}
-
-.book-stage__pull:disabled {
-  cursor: default;
-}
-
-.book-stage__pull:not(:disabled):hover::after {
-  content: '';
-  position: absolute;
-  top: 8%;
-  bottom: 8%;
-  width: 0.5rem;
+  top: 1.2rem;
+  bottom: 1.2rem;
+  width: 3.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 999px;
-  background: rgba(255, 235, 199, 0.28);
+  background: rgba(255, 240, 212, 0.08);
+  color: rgba(255, 240, 212, 0.72);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  pointer-events: none;
+  transition: opacity 180ms ease, background 180ms ease;
 }
 
-.book-stage__pull--left:hover::after {
-  left: 1rem;
+.book-stage__grab--left {
+  left: 0.7rem;
 }
 
-.book-stage__pull--right:hover::after {
-  right: 1rem;
+.book-stage__grab--right {
+  right: 0.7rem;
+}
+
+.book-stage__grab--disabled {
+  opacity: 0.18;
+}
+
+.book-stage__spread--drag-prev .book-stage__grab--left,
+.book-stage__spread--drag-next .book-stage__grab--right {
+  background: rgba(255, 240, 212, 0.16);
 }
 
 .book-stage__spread--next .book-stage__page--right {
@@ -404,8 +416,8 @@
     display: none;
   }
 
-  .book-stage__pull {
-    width: 22%;
+  .book-stage__grab {
+    width: 2.6rem;
   }
 }
 
@@ -419,7 +431,7 @@
   }
 
   .centerpiece__hotspot {
-    width: min(66vw, 18rem);
+    width: min(84vw, 22rem);
   }
 
   .centerpiece__label {
