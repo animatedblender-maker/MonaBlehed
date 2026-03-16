@@ -34,7 +34,17 @@ function App() {
   const cleanupRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
+    const attemptWindStart = () => {
+      void startWind()
+    }
+
+    void startWind()
+    window.addEventListener('pointerdown', attemptWindStart, { once: true })
+    window.addEventListener('keydown', attemptWindStart, { once: true })
+
     return () => {
+      window.removeEventListener('pointerdown', attemptWindStart)
+      window.removeEventListener('keydown', attemptWindStart)
       cleanupRef.current?.()
       void audioContextRef.current?.close()
     }
@@ -122,20 +132,6 @@ function App() {
     setWindReady(true)
   }
 
-  const stopWind = () => {
-    cleanupRef.current?.()
-    setSoundOn(false)
-  }
-
-  const toggleSound = async () => {
-    if (soundOn) {
-      stopWind()
-      return
-    }
-
-    await startWind()
-  }
-
   const openBook = async () => {
     setBookOpen(true)
     await startWind()
@@ -180,10 +176,7 @@ function App() {
           I switched from a reconstruction to the actual artwork you provided, then layered wind,
           dust, and a central hotspot on top so the composition stays exact.
         </p>
-        <button className="sound-toggle" type="button" onClick={() => void toggleSound()}>
-          {soundOn ? 'Mute desert wind' : 'Play desert wind'}
-        </button>
-        <p className="hud__hint">{windReady ? 'Ambient wind is active.' : 'Sound starts after a click.'}</p>
+        <p className="hud__hint">{windReady ? 'Ambient wind is active.' : 'Ambient wind will begin automatically.'}</p>
       </aside>
 
       {bookOpen ? (
