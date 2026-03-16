@@ -1,61 +1,100 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import oasisMap from './assets/oasis-map.jpg'
+import centerShape from './assets/center-shape.jpg'
 
-type StoryPage = {
-  title: string
-  text: string
+type Palm = {
+  id: number
+  top: string
+  left: string
+  scale: number
+  delay: string
+  duration: string
+  rotate: number
 }
 
-const storyPages: StoryPage[] = [
-  {
-    title: 'Opening',
-    text:
-      'The wind crosses the oasis before the first word is spoken. Press deeper into the story and let the desert open its memory.',
-  },
-  {
-    title: 'The Grove',
-    text:
-      'Palm shadows sway around the hidden shape. Every tree leans as if it knows the promise written in the center of the land.',
-  },
-  {
-    title: 'The Book',
-    text:
-      'This book can now live behind the map marker. Replace this sample text with your real pages, narration, and chapter structure.',
-  },
+const pageModules = import.meta.glob('./assets/book-pages/*.{png,jpg,jpeg,JPG,JPEG}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
+
+const bookPages = Object.entries(pageModules)
+  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+  .map(([, src]) => src)
+
+const palms: Palm[] = [
+  { id: 1, top: '4%', left: '9%', scale: 0.9, delay: '0s', duration: '8s', rotate: -28 },
+  { id: 2, top: '7%', left: '18%', scale: 1, delay: '-2s', duration: '9s', rotate: -18 },
+  { id: 3, top: '5%', left: '31%', scale: 0.92, delay: '-4s', duration: '7.4s', rotate: -12 },
+  { id: 4, top: '9%', left: '44%', scale: 1.08, delay: '-1s', duration: '9.2s', rotate: 4 },
+  { id: 5, top: '6%', left: '57%', scale: 0.94, delay: '-3s', duration: '8.8s', rotate: 10 },
+  { id: 6, top: '8%', left: '71%', scale: 0.98, delay: '-5s', duration: '7.8s', rotate: 18 },
+  { id: 7, top: '10%', left: '84%', scale: 1, delay: '-2.5s', duration: '8.6s', rotate: 28 },
+  { id: 8, top: '24%', left: '7%', scale: 1.02, delay: '-1.2s', duration: '8s', rotate: -42 },
+  { id: 9, top: '20%', left: '19%', scale: 0.95, delay: '-4.2s', duration: '9.4s', rotate: -24 },
+  { id: 10, top: '23%', left: '31%', scale: 0.88, delay: '-2.2s', duration: '7.9s', rotate: -13 },
+  { id: 11, top: '18%', left: '72%', scale: 0.9, delay: '-5.4s', duration: '9.1s', rotate: 21 },
+  { id: 12, top: '24%', left: '83%', scale: 1.05, delay: '-3.8s', duration: '8.7s', rotate: 38 },
+  { id: 13, top: '40%', left: '9%', scale: 1, delay: '-1.8s', duration: '8.5s', rotate: -68 },
+  { id: 14, top: '36%', left: '22%', scale: 0.96, delay: '-5.6s', duration: '8.9s', rotate: -46 },
+  { id: 15, top: '43%', left: '80%', scale: 1.04, delay: '-3.4s', duration: '8.2s', rotate: 62 },
+  { id: 16, top: '56%', left: '10%', scale: 0.9, delay: '-2.7s', duration: '7.7s', rotate: -72 },
+  { id: 17, top: '60%', left: '23%', scale: 1.03, delay: '-4.9s', duration: '9.3s', rotate: -50 },
+  { id: 18, top: '61%', left: '76%', scale: 0.92, delay: '-1.4s', duration: '8.1s', rotate: 47 },
+  { id: 19, top: '74%', left: '12%', scale: 0.98, delay: '-3.1s', duration: '9s', rotate: -38 },
+  { id: 20, top: '78%', left: '32%', scale: 0.9, delay: '-5.1s', duration: '7.6s', rotate: -16 },
+  { id: 21, top: '82%', left: '49%', scale: 1.05, delay: '-1.9s', duration: '9.5s', rotate: 0 },
+  { id: 22, top: '77%', left: '67%', scale: 0.9, delay: '-4.4s', duration: '8.4s', rotate: 16 },
+  { id: 23, top: '81%', left: '83%', scale: 1.03, delay: '-2.1s', duration: '8.8s', rotate: 34 },
 ]
+
+function PalmTree({ palm }: { palm: Palm }) {
+  return (
+    <div
+      className="palm"
+      style={
+        {
+          top: palm.top,
+          left: palm.left,
+          '--scale': palm.scale,
+          '--delay': palm.delay,
+          '--duration': palm.duration,
+          '--rotate': `${palm.rotate}deg`,
+        } as React.CSSProperties
+      }
+    >
+      <span className="palm__trunk" />
+      <span className="palm__crown">
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+      </span>
+    </div>
+  )
+}
 
 function App() {
   const [currentPage, setCurrentPage] = useState(0)
-  const [bookOpen, setBookOpen] = useState(false)
-  const [soundOn, setSoundOn] = useState(false)
+  const [openProgress, setOpenProgress] = useState(0)
   const [windReady, setWindReady] = useState(false)
+  const [soundOn, setSoundOn] = useState(false)
+  const [turnDirection, setTurnDirection] = useState<'next' | 'prev' | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
+  const turnTimeoutRef = useRef<number | null>(null)
 
-  useEffect(() => {
-    const attemptWindStart = () => {
-      void startWind()
-    }
-
-    void startWind()
-    window.addEventListener('pointerdown', attemptWindStart, { once: true })
-    window.addEventListener('keydown', attemptWindStart, { once: true })
-
-    return () => {
-      window.removeEventListener('pointerdown', attemptWindStart)
-      window.removeEventListener('keydown', attemptWindStart)
-      cleanupRef.current?.()
-      void audioContextRef.current?.close()
-    }
-  }, [])
+  const isBookOpen = openProgress >= 1
 
   const startWind = async () => {
     if (soundOn) {
       return
     }
 
-    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
 
     if (!AudioContextCtor) {
       return
@@ -132,87 +171,132 @@ function App() {
     setWindReady(true)
   }
 
-  const openBook = async () => {
-    setBookOpen(true)
-    await startWind()
+  useEffect(() => {
+    const attemptWindStart = () => {
+      void startWind()
+    }
+
+    void startWind()
+    window.addEventListener('pointerdown', attemptWindStart, { once: true })
+    window.addEventListener('keydown', attemptWindStart, { once: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', attemptWindStart)
+      window.removeEventListener('keydown', attemptWindStart)
+      if (turnTimeoutRef.current !== null) {
+        window.clearTimeout(turnTimeoutRef.current)
+      }
+      cleanupRef.current?.()
+      void audioContextRef.current?.close()
+    }
+  }, [])
+
+  const handleWheel: React.WheelEventHandler<HTMLElement> = (event) => {
+    if (isBookOpen || event.deltaY <= 0) {
+      return
+    }
+
+    event.preventDefault()
+    void startWind()
+
+    setOpenProgress((progress) => Math.min(1, progress + event.deltaY / 900))
   }
 
-  const closeBook = () => {
-    setBookOpen(false)
+  const animateTurn = (direction: 'next' | 'prev', nextIndex: number) => {
+    setTurnDirection(direction)
+    if (turnTimeoutRef.current !== null) {
+      window.clearTimeout(turnTimeoutRef.current)
+    }
+
+    turnTimeoutRef.current = window.setTimeout(() => {
+      setCurrentPage(nextIndex)
+      setTurnDirection(null)
+      turnTimeoutRef.current = null
+    }, 180)
   }
 
   const nextPage = () => {
-    setCurrentPage((page) => Math.min(page + 1, storyPages.length - 1))
+    if (currentPage >= bookPages.length - 1) {
+      return
+    }
+
+    animateTurn('next', currentPage + 1)
   }
 
   const prevPage = () => {
-    setCurrentPage((page) => Math.max(page - 1, 0))
+    if (currentPage <= 0) {
+      return
+    }
+
+    animateTurn('prev', currentPage - 1)
   }
 
-  const page = storyPages[currentPage]
-
   return (
-    <main className="scene">
-      <div className="scene__backdrop">
-        <img className="scene__painting" src={oasisMap} alt="Painted oasis map" />
-        <div className="scene__wash" />
-        <div className="scene__wind-lines scene__wind-lines--a" />
-        <div className="scene__wind-lines scene__wind-lines--b" />
-        <div className="scene__dust scene__dust--a" />
-        <div className="scene__dust scene__dust--b" />
+    <main
+      className={`scene ${isBookOpen ? 'scene--book-open' : ''}`}
+      onWheel={handleWheel}
+      style={{ '--open-progress': openProgress } as React.CSSProperties}
+    >
+      <div className="scene__sky" />
+      <div className="scene__sand" />
+      <div className="scene__dust scene__dust--a" />
+      <div className="scene__dust scene__dust--b" />
 
-        <section className="centerpiece" aria-label="Hidden story marker">
-          <button className="centerpiece__hotspot" type="button" onClick={openBook}>
-            <span className="centerpiece__pulse" />
-            <span className="centerpiece__label">Open the book</span>
-          </button>
-        </section>
-      </div>
+      {palms.map((palm) => (
+        <PalmTree key={palm.id} palm={palm} />
+      ))}
+
+      <section className="centerpiece" aria-label="Scroll to open the book">
+        <div className="centerpiece__halo" />
+        <div className="centerpiece__hotspot">
+          <img className="centerpiece__painting" src={centerShape} alt="Painted center marker" />
+          <span className="centerpiece__label">Scroll to open the book</span>
+        </div>
+      </section>
 
       <aside className="hud">
         <p className="hud__eyebrow">Desert memory</p>
-        <h1>The original painted map is now the scene.</h1>
+        <h1>Scroll deeper and let the book unfold.</h1>
         <p className="hud__copy">
-          I switched from a reconstruction to the actual artwork you provided, then layered wind,
-          dust, and a central hotspot on top so the composition stays exact.
+          The desert opens with the wheel or trackpad. Once the book is fully open, click the right
+          or left page edge to pull through the real illustrated pages.
         </p>
-        <p className="hud__hint">{windReady ? 'Ambient wind is active.' : 'Ambient wind will begin automatically.'}</p>
+        <p className="hud__hint">
+          {isBookOpen
+            ? `Book open. Page ${currentPage + 1} of ${bookPages.length}.`
+            : `Scroll progress ${Math.round(openProgress * 100)}%. Ambient wind ${windReady ? 'active' : 'loading'}.`}
+        </p>
       </aside>
 
-      {bookOpen ? (
-        <div className="book-overlay" role="dialog" aria-modal="true" aria-label="Story book">
-          <div className="book">
-            <button className="book__close" type="button" onClick={closeBook} aria-label="Close book">
-              Close
-            </button>
-            <div className="book__pages">
-              <article className="book__page book__page--left">
-                <p className="book__chapter">Chapter {currentPage + 1}</p>
-                <h2>{page.title}</h2>
-                <p>{page.text}</p>
-              </article>
-              <article className="book__page book__page--right">
-                <div className="book__sigil" />
-                <p>
-                  Replace this panel with your real illustrations, Arabic text, narration triggers,
-                  or page-specific interactions from the book.
-                </p>
-              </article>
-            </div>
-            <div className="book__nav">
-              <button type="button" onClick={prevPage} disabled={currentPage === 0}>
-                Previous
-              </button>
-              <span>
-                Page {currentPage + 1} of {storyPages.length}
-              </span>
-              <button type="button" onClick={nextPage} disabled={currentPage === storyPages.length - 1}>
-                Next
-              </button>
-            </div>
+      <section className={`book-stage ${isBookOpen ? 'book-stage--open' : ''}`} aria-hidden={!isBookOpen}>
+        <div className="book-stage__shell">
+          <div className={`book-stage__spread ${turnDirection ? `book-stage__spread--${turnDirection}` : ''}`}>
+            <button
+              className="book-stage__pull book-stage__pull--left"
+              type="button"
+              onClick={prevPage}
+              disabled={currentPage === 0}
+              aria-label="Previous page"
+            />
+            <article className="book-stage__page book-stage__page--left">
+              <img src={bookPages[currentPage]} alt={`Book page ${currentPage + 1}`} />
+            </article>
+            <article className="book-stage__page book-stage__page--right">
+              <img
+                src={bookPages[Math.min(currentPage + 1, bookPages.length - 1)]}
+                alt={`Book page ${Math.min(currentPage + 2, bookPages.length)}`}
+              />
+            </article>
+            <button
+              className="book-stage__pull book-stage__pull--right"
+              type="button"
+              onClick={nextPage}
+              disabled={currentPage >= bookPages.length - 2}
+              aria-label="Next page"
+            />
           </div>
         </div>
-      ) : null}
+      </section>
     </main>
   )
 }
