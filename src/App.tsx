@@ -13,16 +13,16 @@ type Palm = {
   rotate: number
 }
 
-const pageModules = import.meta.glob('./assets/book-pages/*.{png,jpg,jpeg,JPG,JPEG}', {
-  eager: true,
-  import: 'default',
-}) as Record<string, string>
-
 type BookPageData = {
   slide: number
   image: string
   text: string
 }
+
+const pageModules = import.meta.glob('./assets/book-pages/*.{png,jpg,jpeg,JPG,JPEG}', {
+  eager: true,
+  import: 'default',
+}) as Record<string, string>
 
 const bookPages = (bookPagesData as BookPageData[])
   .map((page) => {
@@ -89,21 +89,20 @@ function PalmTree({ palm }: { palm: Palm }) {
 }
 
 function App() {
-  const [currentSpread, setCurrentSpread] = useState(0)
+  const [currentPage, setCurrentPage] = useState(0)
   const [openProgress, setOpenProgress] = useState(0)
   const [windReady, setWindReady] = useState(false)
   const [soundOn, setSoundOn] = useState(false)
-  const [turnDirection, setTurnDirection] = useState<'next' | 'prev' | null>(null)
-  const [dragOffset, setDragOffset] = useState(0)
+  const [flipDirection, setFlipDirection] = useState<'next' | 'prev' | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
-  const turnTimeoutRef = useRef<number | null>(null)
-  const dragStartXRef = useRef<number | null>(null)
-  const dragSideRef = useRef<'next' | 'prev' | null>(null)
   const swipeStartYRef = useRef<number | null>(null)
   const swipeProgressStartRef = useRef(0)
+  const wheelLockRef = useRef(false)
+  const flipTimeoutRef = useRef<number | null>(null)
 
   const isBookOpen = openProgress >= 1
+  const page = bookPages[currentPage]
 
   const startWind = async () => {
     if (soundOn) {
@@ -201,153 +200,95 @@ function App() {
     return () => {
       window.removeEventListener('pointerdown', attemptWindStart)
       window.removeEventListener('keydown', attemptWindStart)
-      if (turnTimeoutRef.current !== null) {
-        window.clearTimeout(turnTimeoutRef.current)
+      if (flipTimeoutRef.current !== null) {
+        window.clearTimeout(flipTimeoutRef.current)
       }
       cleanupRef.current?.()
       void audioContextRef.current?.close()
     }
   }, [])
 
-  const handleWheel: React.WheelEventHandler<HTMLElement> = (event) => {
-    event.preventDefault()
-    void startWind()
-
-    setOpenProgress((progress) => Math.max(0, Math.min(1, progress + event.deltaY / 900)))
-  }
-
-  const handleScenePointerDown: React.PointerEventHandler<HTMLElement> = (event) => {
-    const target = event.target as HTMLElement
-
-    if (target.closest('.book-stage__spread')) {
+  const animateFlip = (direction: 'next' | 'prev', nextIndex: number) => {
+    if (wheelLockRef.current) {
       return
     }
 
+    wheelLockRef.current = true
+    setFlipDirection(direction)
+
+    if (flipTimeoutRef.current !== null) {
+      window.clearTimeout(flipTimeoutRef.current)
+    }
+
+    flipTimeoutRef.current = window.setTimeout(() => {
+      setCurrentPage(nextIndex)
+      setFlipDirection(null)
+      wheelLockRef.current = false
+      flipTimeoutRef.current = null
+    }, 260)
+  }
+
+  const handleAdvance = (deltaY: number) => {
+    if (deltaY > 0) {
+      if (!isBookOpen) {
+        setOpenProgress((progress) => Math.max(0, Math.min(1, progress + deltaY / 900)))
+        return
+      }
+
+      if (currentPage < bookPages.length - 1) {
+        animateFlip('next', currentPage + 1)
+      }
+      return
+    }
+
+    if (deltaY < 0) {
+      if (isBookOpen && currentPage > 0) {
+        animateFlip('prev', currentPage - 1)
+        return
+      }
+
+      setOpenProgress((progress) => Math.max(0, Math.min(1, progress + deltaY / 900)))
+    }
+  }
+
+  const handleWheel: React.WheelEventHandler<HTMLElement> = (event) => {
+    event.preventDefault()
+    void startWind()
+    handleAdvance(event.deltaY)
+  }
+
+  const handleScenePointerDown: React.PointerEventHandler<HTMLElement> = (event) => {
     swipeStartYRef.current = event.clientY
     swipeProgressStartRef.current = openProgress
   }
 
   const handleScenePointerMove: React.PointerEventHandler<HTMLElement> = (event) => {
-    if (swipeStartYRef.current === null) {
+    if (swipeStartYRef.current === null || wheelLockRef.current) {
       return
     }
 
     const delta = swipeStartYRef.current - event.clientY
-    setOpenProgress(Math.max(0, Math.min(1, swipeProgressStartRef.current + delta / 500)))
+    if (Math.abs(delta) < 22) {
+      return
+    }
+
+    swipeStartYRef.current = event.clientY
+    handleAdvance(delta * 1.6)
   }
 
   const endSceneSwipe = () => {
     swipeStartYRef.current = null
   }
 
-  const animateTurn = (direction: 'next' | 'prev', nextIndex: number) => {
-    setTurnDirection(direction)
-    setDragOffset(0)
-    if (turnTimeoutRef.current !== null) {
-      window.clearTimeout(turnTimeoutRef.current)
-    }
-
-    turnTimeoutRef.current = window.setTimeout(() => {
-      setCurrentSpread(nextIndex)
-      setTurnDirection(null)
-      turnTimeoutRef.current = null
-    }, 180)
-  }
-
-  const nextPage = () => {
-    if (currentSpread >= bookPages.length - 2) {
-      return
-    }
-
-    animateTurn('next', Math.min(currentSpread + 2, Math.max(bookPages.length - 1, 0)))
-  }
-
-  const prevPage = () => {
-    if (currentSpread <= 0) {
-      return
-    }
-
-    animateTurn('prev', Math.max(currentSpread - 2, 0))
-  }
-
-  const handlePagePointerDown: React.PointerEventHandler<HTMLElement> = (event) => {
-    if (!isBookOpen) {
-      return
-    }
-
-    const side = event.currentTarget.dataset.side as 'next' | 'prev'
-
-    if (side === 'next' && currentSpread >= bookPages.length - 2) {
-      return
-    }
-
-    if (side === 'prev' && currentSpread === 0) {
-      return
-    }
-
-    dragStartXRef.current = event.clientX
-    dragSideRef.current = side
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  const handleSpreadPointerMove: React.PointerEventHandler<HTMLDivElement> = (event) => {
-    if (dragStartXRef.current === null || dragSideRef.current === null) {
-      return
-    }
-
-    const delta = event.clientX - dragStartXRef.current
-    const nextOffset = dragSideRef.current === 'next' ? Math.min(0, delta) : Math.max(0, delta)
-    setDragOffset(nextOffset)
-  }
-
-  const endDrag = () => {
-    if (dragSideRef.current === 'next' && dragOffset < -90) {
-      nextPage()
-    } else if (dragSideRef.current === 'prev' && dragOffset > 90) {
-      prevPage()
-    } else {
-      setDragOffset(0)
-    }
-
-    dragStartXRef.current = null
-    dragSideRef.current = null
-  }
-
-  const handleSpreadPointerUp: React.PointerEventHandler<HTMLDivElement> = () => {
-    if (dragStartXRef.current === null) {
-      return
-    }
-    endDrag()
-  }
-
-  const leftPage = bookPages[currentSpread]
-  const rightPage = bookPages[Math.min(currentSpread + 1, bookPages.length - 1)]
-  const bookStatus = isBookOpen
-    ? `Book open. Spread ${Math.floor(currentSpread / 2) + 1} of ${Math.ceil(bookPages.length / 2)}.`
-    : `Scroll progress ${Math.round(openProgress * 100)}%. Ambient wind ${windReady ? 'active' : 'loading'}.`
-
-  const spreadStyle = {
-    '--drag-offset': `${dragOffset}px`,
-    '--drag-next': dragSideRef.current === 'next' ? `${Math.abs(Math.min(0, dragOffset))}px` : '0px',
-    '--drag-prev': dragSideRef.current === 'prev' ? `${Math.max(0, dragOffset)}px` : '0px',
-  } as React.CSSProperties
-
-  const nextDisabled = currentSpread >= bookPages.length - 2
-  const prevDisabled = currentSpread === 0
-
-  useEffect(() => {
-    if (!isBookOpen) {
-      setDragOffset(0)
-      dragStartXRef.current = null
-      dragSideRef.current = null
-    }
-  }, [isBookOpen])
-
   useEffect(() => {
     if (openProgress === 0) {
-      setCurrentSpread(0)
+      setCurrentPage(0)
     }
   }, [openProgress])
+
+  const bookStatus = isBookOpen
+    ? `Page ${currentPage + 1} of ${bookPages.length}. Scroll to flip.`
+    : `Scroll progress ${Math.round(openProgress * 100)}%. Ambient wind ${windReady ? 'active' : 'loading'}.`
 
   return (
     <main
@@ -381,41 +322,19 @@ function App() {
         <h1>Scroll deeper and let the book unfold.</h1>
         <p className="hud__copy">
           The desert opens with the wheel, trackpad, or a vertical swipe on mobile. Once the book
-          is fully open, drag a page edge to pull through the illustrated spreads.
+          is open, the same scroll gesture flips one actual page at a time.
         </p>
         <p className="hud__hint">{bookStatus}</p>
       </aside>
 
       <section className={`book-stage ${isBookOpen ? 'book-stage--open' : ''}`} aria-hidden={!isBookOpen}>
         <div className="book-stage__shell">
-          <div
-            className={`book-stage__spread ${turnDirection ? `book-stage__spread--${turnDirection}` : ''} ${dragSideRef.current ? `book-stage__spread--drag-${dragSideRef.current}` : ''}`}
-            style={spreadStyle}
-            onPointerMove={handleSpreadPointerMove}
-            onPointerUp={handleSpreadPointerUp}
-            onPointerCancel={endDrag}
-          >
-            <article
-              className={`book-stage__page book-stage__page--left ${prevDisabled ? 'book-stage__page--disabled' : 'book-stage__page--grabbable'}`}
-              data-side="prev"
-              onPointerDown={handlePagePointerDown}
-            >
-              <div className="book-stage__sheet">
-                <img src={leftPage.src} alt={`Book page ${currentSpread + 1}`} />
-                {leftPage.text ? <div className="book-stage__text">{leftPage.text}</div> : null}
-              </div>
-            </article>
-            <article
-              className={`book-stage__page book-stage__page--right ${nextDisabled ? 'book-stage__page--disabled' : 'book-stage__page--grabbable'}`}
-              data-side="next"
-              onPointerDown={handlePagePointerDown}
-            >
-              <div className="book-stage__sheet">
-                <img src={rightPage.src} alt={`Book page ${Math.min(currentSpread + 2, bookPages.length)}`} />
-                {rightPage.text ? <div className="book-stage__text">{rightPage.text}</div> : null}
-              </div>
-            </article>
-          </div>
+          <article className={`book-stage__single ${flipDirection ? `book-stage__single--${flipDirection}` : ''}`}>
+            <div className="book-stage__sheet">
+              <img src={page.src} alt={`Book page ${currentPage + 1}`} />
+              {page.text ? <div className="book-stage__text">{page.text}</div> : null}
+            </div>
+          </article>
         </div>
       </section>
     </main>

@@ -232,7 +232,7 @@
 }
 
 .book-stage__shell {
-  width: min(110rem, 100%);
+  width: min(54rem, 100%);
   transform:
     translateY(calc((1 - var(--open-progress)) * 22vh))
     scale(calc(0.42 + var(--open-progress) * 0.58));
@@ -240,11 +240,12 @@
   transition: transform 140ms ease-out, opacity 140ms ease-out;
 }
 
-.book-stage__spread {
+.book-stage--open {
+  pointer-events: auto;
+}
+
+.book-stage__single {
   position: relative;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
   padding: 1.4rem;
   border-radius: 2rem;
   background:
@@ -254,48 +255,17 @@
     0 2.4rem 4rem rgba(54, 20, 6, 0.32),
     inset 0 0 0 1px rgba(255, 238, 211, 0.08);
   overflow: hidden;
-  touch-action: none;
-  user-select: none;
 }
 
-.book-stage--open {
-  pointer-events: auto;
-}
-
-.book-stage__spread::before {
+.book-stage__single::before {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 0.8rem;
-  bottom: 0.8rem;
+  left: 1rem;
+  top: 1rem;
+  bottom: 1rem;
   width: 1rem;
-  transform: translateX(-50%);
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(74, 35, 16, 0.92), rgba(172, 118, 72, 0.3), rgba(74, 35, 16, 0.92));
-}
-
-.book-stage__page {
-  position: relative;
-  min-height: min(82vh, 64rem);
-  border-radius: 1.25rem;
-  background:
-    linear-gradient(180deg, rgba(255, 251, 242, 0.98), rgba(241, 226, 199, 0.98));
-  overflow: visible;
-  box-shadow:
-    inset 0 0 0 1px rgba(93, 54, 27, 0.12),
-    0 1.4rem 2rem rgba(45, 17, 6, 0.12);
-}
-
-.book-stage__page--grabbable {
-  cursor: grab;
-}
-
-.book-stage__page--grabbable:active {
-  cursor: grabbing;
-}
-
-.book-stage__page--disabled {
-  cursor: default;
 }
 
 .book-stage__sheet {
@@ -310,11 +280,18 @@
   box-shadow:
     inset 0 0 0 1px rgba(93, 54, 27, 0.12),
     0 1.4rem 2rem rgba(45, 17, 6, 0.12);
-  transition: transform 120ms ease-out, box-shadow 120ms ease-out, filter 120ms ease-out;
-  will-change: transform, box-shadow;
+  transform-origin: left center;
 }
 
-.book-stage__page img {
+.book-stage__single--next .book-stage__sheet {
+  animation: pageFlipNext 280ms ease;
+}
+
+.book-stage__single--prev .book-stage__sheet {
+  animation: pageFlipPrev 280ms ease;
+}
+
+.book-stage__sheet img {
   display: block;
   width: 100%;
   height: min(54vh, 34rem);
@@ -332,66 +309,6 @@
   white-space: pre-line;
   background: linear-gradient(180deg, rgba(252, 247, 238, 0.96), rgba(245, 232, 210, 0.98));
   border-top: 1px solid rgba(93, 54, 27, 0.12);
-}
-
-.book-stage__page--left {
-  perspective: 2200px;
-}
-
-.book-stage__page--right {
-  perspective: 2200px;
-}
-
-.book-stage__page--left .book-stage__sheet {
-  transform:
-    translateX(calc(var(--drag-prev) / 9))
-    translateY(calc(var(--drag-prev) / -28))
-    rotateZ(calc(var(--drag-prev) / 110))
-    rotateY(calc(var(--drag-prev) / 10))
-    skewY(calc(var(--drag-prev) / 120));
-  transform-origin: right center;
-  box-shadow:
-    inset 0 0 0 1px rgba(93, 54, 27, 0.12),
-    calc(var(--drag-prev) / 18) 1.6rem 2.6rem rgba(45, 17, 6, 0.22);
-}
-
-.book-stage__page--right .book-stage__sheet {
-  transform:
-    translateX(calc(var(--drag-next) / -9))
-    translateY(calc(var(--drag-next) / -28))
-    rotateZ(calc(var(--drag-next) / -110))
-    rotateY(calc(var(--drag-next) / -10))
-    skewY(calc(var(--drag-next) / -120));
-  transform-origin: left center;
-  box-shadow:
-    inset 0 0 0 1px rgba(93, 54, 27, 0.12),
-    calc(var(--drag-next) / -18) 1.6rem 2.6rem rgba(45, 17, 6, 0.22);
-}
-
-.book-stage__page--left .book-stage__sheet::after,
-.book-stage__page--right .book-stage__sheet::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg, rgba(124, 77, 44, 0.12), transparent 22%, transparent 78%, rgba(124, 77, 44, 0.08));
-  mix-blend-mode: multiply;
-}
-
-.book-stage__spread--drag-next .book-stage__page--right .book-stage__sheet::after {
-  background: linear-gradient(90deg, rgba(124, 77, 44, 0.22), transparent 28%, transparent 68%, rgba(255, 255, 255, 0.18));
-}
-
-.book-stage__spread--drag-prev .book-stage__page--left .book-stage__sheet::after {
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.18), transparent 32%, transparent 72%, rgba(124, 77, 44, 0.22));
-}
-
-.book-stage__spread--next .book-stage__page--right {
-  animation: pageTurnNext 260ms ease;
-}
-
-.book-stage__spread--prev .book-stage__page--left {
-  animation: pageTurnPrev 260ms ease;
 }
 
 @keyframes sway {
@@ -414,14 +331,14 @@
   50% { transform: translateY(-0.5rem) rotate(2deg); }
 }
 
-@keyframes pageTurnNext {
-  0% { transform: perspective(1200px) rotateY(0deg); transform-origin: left center; }
-  100% { transform: perspective(1200px) rotateY(-16deg); transform-origin: left center; }
+@keyframes pageFlipNext {
+  0% { transform: perspective(2000px) rotateY(0deg) translateX(0); }
+  100% { transform: perspective(2000px) rotateY(-18deg) translateX(-1.3rem); }
 }
 
-@keyframes pageTurnPrev {
-  0% { transform: perspective(1200px) rotateY(0deg); transform-origin: right center; }
-  100% { transform: perspective(1200px) rotateY(16deg); transform-origin: right center; }
+@keyframes pageFlipPrev {
+  0% { transform: perspective(2000px) rotateY(0deg) translateX(0); }
+  100% { transform: perspective(2000px) rotateY(18deg) translateX(1.3rem); }
 }
 
 @media (max-width: 900px) {
@@ -440,27 +357,11 @@
     inset: 27% 8% 20%;
   }
 
-  .book-stage__spread {
-    grid-template-columns: 1fr;
-  }
-
-  .book-stage__spread::before {
-    display: none;
-  }
-
-  .book-stage__page {
-    min-height: min(56vh, 38rem);
-  }
-
   .book-stage__sheet {
     min-height: min(56vh, 38rem);
   }
 
-  .book-stage__page--right {
-    display: none;
-  }
-
-  .book-stage__page img {
+  .book-stage__sheet img {
     height: min(36vh, 20rem);
   }
 
@@ -469,7 +370,6 @@
     line-height: 1.8;
     padding: 1rem 1rem 1.2rem;
   }
-
 }
 
 @media (max-width: 640px) {
@@ -499,7 +399,12 @@
     padding: 0.5rem;
   }
 
-  .book-stage__spread {
-    padding: 0.75rem;
+  .book-stage__single {
+    padding: 0.8rem;
+  }
+
+  .book-stage__single::before {
+    left: 0.6rem;
+    width: 0.7rem;
   }
 }
