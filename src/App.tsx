@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 import centerShape from './assets/center-shape.jpg'
+import bookPagesData from './assets/book-pages-data.json'
 
 type Palm = {
   id: number
@@ -17,9 +18,21 @@ const pageModules = import.meta.glob('./assets/book-pages/*.{png,jpg,jpeg,JPG,JP
   import: 'default',
 }) as Record<string, string>
 
-const bookPages = Object.entries(pageModules)
-  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-  .map(([, src]) => src)
+type BookPageData = {
+  slide: number
+  image: string
+  text: string
+}
+
+const bookPages = (bookPagesData as BookPageData[])
+  .map((page) => {
+    const imageEntry = Object.entries(pageModules).find(([path]) => path.endsWith(`/${page.image}`))
+    return {
+      ...page,
+      src: imageEntry?.[1] ?? '',
+    }
+  })
+  .filter((page) => page.src)
 
 const palms: Palm[] = [
   { id: 1, top: '4%', left: '9%', scale: 0.9, delay: '0s', duration: '8s', rotate: -28 },
@@ -385,10 +398,12 @@ function App() {
             onPointerCancel={endDrag}
           >
             <article className="book-stage__page book-stage__page--left">
-              <img src={leftPage} alt={`Book page ${currentSpread + 1}`} />
+              <img src={leftPage.src} alt={`Book page ${currentSpread + 1}`} />
+              {leftPage.text ? <div className="book-stage__text">{leftPage.text}</div> : null}
             </article>
             <article className="book-stage__page book-stage__page--right">
-              <img src={rightPage} alt={`Book page ${Math.min(currentSpread + 2, bookPages.length)}`} />
+              <img src={rightPage.src} alt={`Book page ${Math.min(currentSpread + 2, bookPages.length)}`} />
+              {rightPage.text ? <div className="book-stage__text">{rightPage.text}</div> : null}
             </article>
             <div className={`book-stage__grab book-stage__grab--left ${prevDisabled ? 'book-stage__grab--disabled' : ''}`}>
               Pull previous

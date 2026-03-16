@@ -277,6 +277,8 @@
 .book-stage__page {
   position: relative;
   min-height: min(82vh, 64rem);
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   border-radius: 1.25rem;
   background:
     linear-gradient(180deg, rgba(255, 251, 242, 0.98), rgba(241, 226, 199, 0.98));
@@ -289,9 +291,21 @@
 .book-stage__page img {
   display: block;
   width: 100%;
-  height: 100%;
+  height: min(54vh, 34rem);
   object-fit: contain;
   background: #f8efde;
+}
+
+.book-stage__text {
+  padding: 1.2rem 1.4rem 1.5rem;
+  color: #4f2814;
+  font-size: 1.08rem;
+  line-height: 1.9;
+  text-align: right;
+  direction: rtl;
+  white-space: pre-line;
+  background: linear-gradient(180deg, rgba(252, 247, 238, 0.96), rgba(245, 232, 210, 0.98));
+  border-top: 1px solid rgba(93, 54, 27, 0.12);
 }
 
 .book-stage__page--left {
@@ -414,6 +428,16 @@
 
   .book-stage__page--right {
     display: none;
+  }
+
+  .book-stage__page img {
+    height: min(36vh, 20rem);
+  }
+
+  .book-stage__text {
+    font-size: 0.98rem;
+    line-height: 1.8;
+    padding: 1rem 1rem 1.2rem;
   }
 
   .book-stage__grab {
