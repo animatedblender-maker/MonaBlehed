@@ -270,24 +270,23 @@ function App() {
     animateTurn('prev', Math.max(currentSpread - 2, 0))
   }
 
-  const handleSpreadPointerDown: React.PointerEventHandler<HTMLDivElement> = (event) => {
+  const handlePagePointerDown: React.PointerEventHandler<HTMLElement> = (event) => {
     if (!isBookOpen) {
       return
     }
 
-    const bounds = event.currentTarget.getBoundingClientRect()
-    const clickedRightHalf = event.clientX > bounds.left + bounds.width / 2
+    const side = event.currentTarget.dataset.side as 'next' | 'prev'
 
-    if (clickedRightHalf && currentSpread >= bookPages.length - 2) {
+    if (side === 'next' && currentSpread >= bookPages.length - 2) {
       return
     }
 
-    if (!clickedRightHalf && currentSpread === 0) {
+    if (side === 'prev' && currentSpread === 0) {
       return
     }
 
     dragStartXRef.current = event.clientX
-    dragSideRef.current = clickedRightHalf ? 'next' : 'prev'
+    dragSideRef.current = side
     event.currentTarget.setPointerCapture(event.pointerId)
   }
 
@@ -314,12 +313,10 @@ function App() {
     dragSideRef.current = null
   }
 
-  const handleSpreadPointerUp: React.PointerEventHandler<HTMLDivElement> = (event) => {
+  const handleSpreadPointerUp: React.PointerEventHandler<HTMLDivElement> = () => {
     if (dragStartXRef.current === null) {
       return
     }
-
-    event.currentTarget.releasePointerCapture(event.pointerId)
     endDrag()
   }
 
@@ -392,25 +389,26 @@ function App() {
           <div
             className={`book-stage__spread ${turnDirection ? `book-stage__spread--${turnDirection}` : ''} ${dragSideRef.current ? `book-stage__spread--drag-${dragSideRef.current}` : ''}`}
             style={spreadStyle}
-            onPointerDown={handleSpreadPointerDown}
             onPointerMove={handleSpreadPointerMove}
             onPointerUp={handleSpreadPointerUp}
             onPointerCancel={endDrag}
           >
-            <article className="book-stage__page book-stage__page--left">
+            <article
+              className={`book-stage__page book-stage__page--left ${prevDisabled ? 'book-stage__page--disabled' : 'book-stage__page--grabbable'}`}
+              data-side="prev"
+              onPointerDown={handlePagePointerDown}
+            >
               <img src={leftPage.src} alt={`Book page ${currentSpread + 1}`} />
               {leftPage.text ? <div className="book-stage__text">{leftPage.text}</div> : null}
             </article>
-            <article className="book-stage__page book-stage__page--right">
+            <article
+              className={`book-stage__page book-stage__page--right ${nextDisabled ? 'book-stage__page--disabled' : 'book-stage__page--grabbable'}`}
+              data-side="next"
+              onPointerDown={handlePagePointerDown}
+            >
               <img src={rightPage.src} alt={`Book page ${Math.min(currentSpread + 2, bookPages.length)}`} />
               {rightPage.text ? <div className="book-stage__text">{rightPage.text}</div> : null}
             </article>
-            <div className={`book-stage__grab book-stage__grab--left ${prevDisabled ? 'book-stage__grab--disabled' : ''}`}>
-              Pull previous
-            </div>
-            <div className={`book-stage__grab book-stage__grab--right ${nextDisabled ? 'book-stage__grab--disabled' : ''}`}>
-              Pull next
-            </div>
           </div>
         </div>
       </section>

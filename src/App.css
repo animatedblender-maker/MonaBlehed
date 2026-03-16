@@ -288,6 +288,18 @@
     0 1.4rem 2rem rgba(45, 17, 6, 0.12);
 }
 
+.book-stage__page--grabbable {
+  cursor: grab;
+}
+
+.book-stage__page--grabbable:active {
+  cursor: grabbing;
+}
+
+.book-stage__page--disabled {
+  cursor: default;
+}
+
 .book-stage__page img {
   display: block;
   width: 100%;
@@ -322,42 +334,6 @@
     rotateY(calc(max(0px, var(--drag-offset)) / -18))
     translateX(calc(max(0px, var(--drag-offset)) / 12));
   transform-origin: left center;
-}
-
-.book-stage__grab {
-  position: absolute;
-  top: 1.2rem;
-  bottom: 1.2rem;
-  width: 3.4rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: rgba(255, 240, 212, 0.08);
-  color: rgba(255, 240, 212, 0.72);
-  font-size: 0.76rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  writing-mode: vertical-rl;
-  pointer-events: none;
-  transition: opacity 180ms ease, background 180ms ease;
-}
-
-.book-stage__grab--left {
-  left: 0.7rem;
-}
-
-.book-stage__grab--right {
-  right: 0.7rem;
-}
-
-.book-stage__grab--disabled {
-  opacity: 0.18;
-}
-
-.book-stage__spread--drag-prev .book-stage__grab--left,
-.book-stage__spread--drag-next .book-stage__grab--right {
-  background: rgba(255, 240, 212, 0.16);
 }
 
 .book-stage__spread--next .book-stage__page--right {
@@ -440,9 +416,6 @@
     padding: 1rem 1rem 1.2rem;
   }
 
-  .book-stage__grab {
-    width: 2.6rem;
-  }
 }
 
 @media (max-width: 640px) {
