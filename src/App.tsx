@@ -258,6 +258,18 @@ function App() {
   }
 
   const handleScenePointerDown: React.PointerEventHandler<HTMLElement> = (event) => {
+    const target = event.target as HTMLElement
+
+    if (target.closest('.book-stage__single')) {
+      return
+    }
+
+    if (isBookOpen) {
+      setOpenProgress(0)
+      swipeStartYRef.current = null
+      return
+    }
+
     swipeStartYRef.current = event.clientY
     swipeProgressStartRef.current = openProgress
   }
